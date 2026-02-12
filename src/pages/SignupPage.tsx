@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMutation } from '@animaapp/playground-react-sdk';
-import { useMockMutation } from '@/hooks/useMockMutation';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { devEmailService } from '@/utils/devEmailService';
 
 export default function SignupPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const realMutation = isMockMode() ? null : useMutation('EmailVerification');
-  const mockMutation = isMockMode() ? useMockMutation('EmailVerification') : null;
-  const { create, isPending, error } = (isMockMode() ? mockMutation : realMutation)!;
+  const { signup } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,29 +50,27 @@ export default function SignupPage() {
       return;
     }
     
+    setIsPending(true);
+    setError(null);
     try {
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      await create({
-        email,
-        code: verificationCode
-      });
-
-      // Send verification email (development only - logs to console)
-      devEmailService.sendVerificationEmail(email, verificationCode);
+      const { error } = await signup(email, password);
+      if (error) throw error;
       
       toast({
         title: 'Verification email sent',
-        description: 'Please check your email (or browser console in dev mode) for the verification code.',
+        description: 'Please check your email for the verification link or code.',
       });
       
       navigate('/auth/verify-email', { state: { email }, replace: true });
-    } catch (err) {
+    } catch (err: any) {
+      setError(err);
       toast({
         title: 'Error',
-        description: 'Failed to create account. Please try again.',
+        description: err.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setIsPending(false);
     }
   };
 

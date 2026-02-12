@@ -7,18 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 import { getRandomMockImage } from '@/lib/utils';
 import { Search } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Post } from '@/types/social';
 
 export default function JourneyPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createNotification } = useNotifications();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 

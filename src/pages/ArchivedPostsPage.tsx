@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import PostDetailModal from '@/components/PostDetailModal';
 import { Archive, ArrowLeft } from 'lucide-react';
-import { useAuth, useQuery, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { isMockMode } from '@/utils/mockMode';
@@ -18,9 +18,7 @@ export default function ArchivedPostsPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [archivedPosts, setArchivedPosts] = useState<Post[]>([]);
 
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   // Fetch Posts
   const realQuery = isMockMode() ? null : useQuery('Post', { orderBy: { createdAt: 'desc' } });

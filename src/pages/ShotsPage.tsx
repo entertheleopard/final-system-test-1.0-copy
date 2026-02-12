@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useShareActions } from '@/contexts/ShareContext';
-import { isMockMode } from '@/utils/mockMode';
 import InstagramLayout from '@/components/InstagramLayout';
 import CommentsSheet from '@/components/CommentsSheet';
 import ShotItem from '@/components/ShotItem';
@@ -10,9 +8,7 @@ import { getRandomMockImage } from '@/lib/utils';
 import type { Post } from '@/types/social';
 
 export default function ShotsPage() {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   const { openShare } = useShareActions();
   
   const [isMuted, setIsMuted] = useState(false);

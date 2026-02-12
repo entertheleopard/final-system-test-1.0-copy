@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAuth, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMutation } from '@animaapp/playground-react-sdk';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { isMockMode } from '@/utils/mockMode';
 import { Button } from '@/components/ui/button';
@@ -21,10 +21,7 @@ export default function EditProfileModal({ onClose, initialProfile, onSave }: Ed
   const { toast } = useToast();
   
   // Auth
-  const realAuth = isMockMode() ? null : useAuth({ requireAuth: true });
-  const mockAuth = isMockMode() ? useMockAuth({ requireAuth: true }) : null;
-  const auth = (isMockMode() ? mockAuth : realAuth)!;
-  const { user } = auth;
+  const { user } = useAuth();
 
   const realMutation = isMockMode() ? null : useMutation('UserProfile');
   const mockMutation = isMockMode() ? useMockMutation('UserProfile') : null;
@@ -105,17 +102,6 @@ export default function EditProfileModal({ onClose, initialProfile, onSave }: Ed
       } else {
         await create({
           userId: user.id,
-          username: formData.username,
-          bio: formData.bio,
-          website: formData.website,
-          profilePictureUrl,
-        });
-      }
-
-      // 2. Update Mock Context (if in mock mode) to keep global state in sync
-      if (isMockMode() && (auth as any).updateProfile) {
-        await (auth as any).updateProfile({
-          name: formData.name,
           username: formData.username,
           bio: formData.bio,
           website: formData.website,

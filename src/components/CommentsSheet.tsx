@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Send, Heart } from 'lucide-react';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { isMockMode } from '@/utils/mockMode';
 import type { Post } from '@/types/social';
 import { cn } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/AvatarImage';
@@ -35,9 +33,7 @@ const AVAILABLE_REACTIONS = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
 
 export default function CommentsSheet({ post, onClose }: CommentsSheetProps) {
   const navigate = useNavigate();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   const { createNotification } = useNotifications();
   
   const [commentText, setCommentText] = useState('');

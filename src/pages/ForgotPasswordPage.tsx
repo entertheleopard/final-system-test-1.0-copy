@@ -1,19 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation } from '@animaapp/playground-react-sdk';
-import { useMockMutation } from '@/hooks/useMockMutation';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { devEmailService } from '@/utils/devEmailService';
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
-  const realMutation = isMockMode() ? null : useMutation('PasswordResetRequest');
-  const mockMutation = isMockMode() ? useMockMutation('PasswordResetRequest') : null;
-  const { create, isPending, error } = (isMockMode() ? mockMutation : realMutation)!;
+  const { resetPassword } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [emailSent, setEmailSent] = useState(false);
@@ -39,23 +36,26 @@ export default function ForgotPasswordPage() {
       return;
     }
     
+    setIsPending(true);
+    setError(null);
     try {
-      await create({ email });
-
-      // Send password reset email (development only - logs to console)
-      devEmailService.sendPasswordResetEmail(email);
+      const { error } = await resetPassword(email);
+      if (error) throw error;
       
       setEmailSent(true);
       toast({
         title: 'Password reset email sent',
-        description: 'Please check your email (or browser console in dev mode) for reset instructions.',
+        description: 'Please check your email for reset instructions.',
       });
-    } catch (err) {
+    } catch (err: any) {
+      setError(err);
       toast({
         title: 'Error',
-        description: 'Failed to send reset email. Please try again.',
+        description: err.message || 'Failed to send reset email. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setIsPending(false);
     }
   };
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
-import { useAuth, useQuery, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { isMockMode } from '@/utils/mockMode';
@@ -18,10 +18,7 @@ export default function EditProfilePage() {
   const { toast } = useToast();
   
   // Auth
-  const realAuth = isMockMode() ? null : useAuth({ requireAuth: true });
-  const mockAuth = isMockMode() ? useMockAuth({ requireAuth: true }) : null;
-  const auth = (isMockMode() ? mockAuth : realAuth)!;
-  const { user } = auth;
+  const { user } = useAuth();
 
   // Data Source: UserProfile Entity
   // We use a separate entity because the default User object is often immutable or limited
@@ -107,18 +104,6 @@ export default function EditProfilePage() {
         console.log('Action: CREATE new UserProfile');
         await create({
           userId: user.id,
-          username: formData.username,
-          bio: formData.bio,
-          website: formData.website,
-          profilePictureUrl,
-        });
-      }
-
-      // 2. Update Mock Context (if in mock mode, to keep global state in sync immediately)
-      if (isMockMode() && (auth as any).updateProfile) {
-        console.log('Action: Syncing with MockAuthContext');
-        await (auth as any).updateProfile({
-          name: formData.name,
           username: formData.username,
           bio: formData.bio,
           website: formData.website,

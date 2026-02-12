@@ -1,9 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   User,
   Lock,
@@ -24,9 +22,7 @@ import {
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { logout } = (isMockMode() ? mockAuth : realAuth)!;
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();

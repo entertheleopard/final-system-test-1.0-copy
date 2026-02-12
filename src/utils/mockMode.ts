@@ -4,11 +4,7 @@
  */
 
 export const isMockMode = () => {
-  // Enable mock mode if:
-  // 1. No backend is configured
-  // 2. Running in preview/development
-  // 3. Network requests are failing
-  return true; // Always enable for preview mode
+  return false; // Disable mock mode to use Supabase
 };
 
 export const MOCK_USERS = [

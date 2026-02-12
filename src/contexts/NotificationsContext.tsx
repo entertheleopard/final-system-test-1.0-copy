@@ -1,8 +1,8 @@
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { useQuery, useMutation, useAuth } from '@animaapp/playground-react-sdk';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
-import { useMockAuth } from '@/contexts/MockAuthContext';
 import { isMockMode } from '@/utils/mockMode';
 import type { Notification, NotificationDraft } from '@/types/schema';
 
@@ -18,9 +18,7 @@ type NotificationsContextType = {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   // Query Notifications
   const realQuery = isMockMode() ? null : useQuery('Notification', { 

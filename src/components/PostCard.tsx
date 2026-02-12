@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useShareActions } from '@/contexts/ShareContext';
-import { isMockMode } from '@/utils/mockMode';
 import { Heart, MessageCircle, Repeat2, Bookmark, MoreHorizontal, Share2, TrendingUp, Trash2, Archive } from 'lucide-react';
 import FriendButton from './FriendButton';
 import { EmojiTray, EmojiOverlay, CaptionSwipePreview, REACTION_EMOJIS } from './EmojiReactions';
@@ -44,9 +42,7 @@ function PostCard({
   isEdgeToEdge = false
 }: PostCardProps) {
   const navigate = useNavigate();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   const { openShare } = useShareActions();
   
   // Reaction State

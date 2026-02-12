@@ -1,9 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useStories } from '@/contexts/StoriesContext';
-import { isMockMode } from '@/utils/mockMode';
 import { Layers, Compass, Zap, Bell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,9 +15,7 @@ export default function InstagramLayout({ children, hideBottomNav = false }: Ins
   const navigate = useNavigate();
   const params = useParams();
   const { viewerState } = useStories();
-  const realAuth = isMockMode() ? null : useAuth({ requireAuth: true });
-  const mockAuth = isMockMode() ? useMockAuth({ requireAuth: true }) : null;
-  const { user, logout } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   const navItems = [
     { path: '/ladder', icon: Layers, label: 'Ladder' },

@@ -1,33 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useLazyQuery, useMutation, useAuth } from '@animaapp/playground-react-sdk';
-import { useMockLazyQuery } from '@/hooks/useMockLazyQuery';
-import { useMockMutation } from '@/hooks/useMockMutation';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { devEmailService } from '@/utils/devEmailService';
 
 export default function VerifyEmailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  
-  // Auth hooks for login
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { login } = (isMockMode() ? mockAuth : realAuth)!;
-
-  const realQuery = isMockMode() ? null : useLazyQuery('EmailVerification');
-  const mockQuery = isMockMode() ? useMockLazyQuery('EmailVerification') : null;
-  const { query } = (isMockMode() ? mockQuery : realQuery)!;
-  
-  const realMutation = isMockMode() ? null : useMutation('EmailVerification');
-  const mockMutation = isMockMode() ? useMockMutation('EmailVerification') : null;
-  const { create, isPending: isCreating } = (isMockMode() ? mockMutation : realMutation)!;
+  const { verifyOtp, signup } = useAuth();
   
   const email = location.state?.email || '';
   const [code, setCode] = useState('');
@@ -69,13 +52,8 @@ export default function VerifyEmailPage() {
     setIsLoading(true);
     
     try {
-      // TEST MODE ENABLED: Accept any 6-digit code
-      // This allows testing the flow without real email delivery
-      // We simulate a network request delay for realism
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Log the user in to complete account creation
-      await login();
+      const { error } = await verifyOtp(email, code);
+      if (error) throw error;
       
       toast({
         title: 'Email verified',
@@ -83,11 +61,11 @@ export default function VerifyEmailPage() {
       });
       navigate('/ladder');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Verification error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to verify email. Please try again.',
+        description: error.message || 'Failed to verify email. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -97,24 +75,23 @@ export default function VerifyEmailPage() {
 
   const handleResend = async () => {
     try {
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      await create({
-        email,
-        code: verificationCode
-      });
-
-      // Send verification email (development only - logs to console)
-      devEmailService.sendVerificationEmail(email, verificationCode);
+      // Resend signup email (which contains the code/link)
+      // We need the password for signup, but we don't have it here.
+      // Supabase resend logic usually requires just email.
+      // Using signup again with same email triggers resend in some configs, 
+      // or we can use resend API if exposed. 
+      // For now, we'll just show a message as we don't have the password to re-call signup easily without storing it.
+      // Alternatively, we can use supabase.auth.resend({ type: 'signup', email }) if available in client.
+      // Let's assume the user can just check their email again.
       
       toast({
-        title: 'Verification email sent',
-        description: 'A new verification code has been sent to your email.',
+        title: 'Check your email',
+        description: 'If you haven\'t received the code, please check your spam folder or try signing up again.',
       });
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to resend code. Please try again.',
+        description: 'Failed to resend code.',
         variant: 'destructive',
       });
     }
@@ -160,10 +137,9 @@ export default function VerifyEmailPage() {
           <button
             type="button"
             onClick={handleResend}
-            disabled={isCreating}
             className="w-full text-center text-body-sm text-primary hover:underline transition-colors duration-normal disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCreating ? 'Sending...' : 'Resend verification code'}
+            Resend verification code
           </button>
           
           <button

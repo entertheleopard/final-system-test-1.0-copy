@@ -6,8 +6,8 @@ import PostSkeleton from '@/components/PostSkeleton';
 import StoryCircle from '@/components/StoryCircle';
 import CommentsSheet from '@/components/CommentsSheet';
 import { useStories } from '@/contexts/StoriesContext';
-import { useAuth, useQuery, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { useNotifications } from '@/contexts/NotificationsContext';
@@ -22,9 +22,7 @@ export default function LadderPage() {
   const { toast } = useToast();
   const { stories, hasActiveStory, getStoriesForUser } = useStories();
   const { createNotification } = useNotifications();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   // Fetch Posts - Global feed, no author filtering
   const realQuery = isMockMode() ? null : useQuery('Post', { orderBy: { createdAt: 'desc' } });

@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useStories } from '@/contexts/StoriesContext';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import { Plus } from 'lucide-react';
 import { AvatarImage } from '@/components/ui/AvatarImage';
 
@@ -15,9 +13,7 @@ interface StoryCircleProps {
 export default function StoryCircle({ userId, isAddStory, onClick }: StoryCircleProps) {
   const navigate = useNavigate();
   const { getStoriesForUser, hasActiveStory, openViewer } = useStories();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   // Handle "Add Story" button explicitly
   if (isAddStory) {

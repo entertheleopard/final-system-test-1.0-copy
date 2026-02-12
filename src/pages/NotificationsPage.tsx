@@ -5,9 +5,6 @@ import FriendButton from '@/components/FriendButton';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { handleAvatarError, handleImageError } from '@/lib/utils';
 import { Heart, MessageCircle, UserPlus, Repeat2, Search, Bell } from 'lucide-react';
-import { useQuery } from '@animaapp/playground-react-sdk';
-import { useMockQuery } from '@/hooks/useMockQuery';
-import { isMockMode } from '@/utils/mockMode';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();

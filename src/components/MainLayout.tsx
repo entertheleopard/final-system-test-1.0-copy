@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@animaapp/playground-react-sdk';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLive } from '@/contexts/LiveContext';
 import { Home, Compass, User, Upload, MessageSquare, Radio, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth({ requireAuth: true });
+  const { user, logout } = useAuth();
   const { startLive } = useLive();
 
   const handleLogout = async () => {

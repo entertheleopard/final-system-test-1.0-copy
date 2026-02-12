@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import { Button } from '@/components/ui/button';
@@ -11,9 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { login } = (isMockMode() ? mockAuth : realAuth)!;
+  const { login } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,17 +44,18 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      await login();
+      const { error } = await login(email, password);
+      if (error) throw error;
       
       toast({
         title: 'Welcome back',
         description: 'You have successfully signed in.',
       });
       navigate('/ladder');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to sign in. Please try again.',
+        description: error.message || 'Failed to sign in. Please try again.',
         variant: 'destructive',
       });
     } finally {

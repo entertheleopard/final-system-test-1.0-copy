@@ -6,8 +6,8 @@ import PhotoEditor from '@/components/upload/PhotoEditor';
 import VideoEditor from '@/components/upload/VideoEditor';
 import CaptionEditor from '@/components/upload/CaptionEditor';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMutation } from '@animaapp/playground-react-sdk';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { isMockMode } from '@/utils/mockMode';
 import { cn } from '@/lib/utils';
@@ -20,9 +20,7 @@ export default function UploadPage() {
   const { toast } = useToast();
   
   // Auth
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user, isPending: isAuthPending } = useAuth();
 
   // Mutation
   const realMutation = isMockMode() ? null : useMutation('Post');
@@ -87,6 +85,18 @@ export default function UploadPage() {
       navigate(-1);
     }
   };
+
+  if (isAuthPending) {
+    return (
+      <InstagramLayout hideBottomNav>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </InstagramLayout>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <InstagramLayout hideBottomNav>

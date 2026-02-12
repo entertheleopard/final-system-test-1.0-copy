@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useAuth } from '@animaapp/playground-react-sdk';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
-import { useMockAuth } from '@/contexts/MockAuthContext';
 import { isMockMode } from '@/utils/mockMode';
 
 export type FriendStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
 
 export function useFriendStatus(targetUserId: string) {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   const [status, setStatus] = useState<FriendStatus>('none');
 
   // Query friend requests involving current user and target user

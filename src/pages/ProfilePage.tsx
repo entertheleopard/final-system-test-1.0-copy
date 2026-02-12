@@ -7,8 +7,8 @@ import EditProfileModal from '@/components/profile/EditProfileModal';
 import PostDetailModal from '@/components/PostDetailModal';
 import { Settings, Grid3X3, Bookmark, UserSquare2, Menu } from 'lucide-react';
 import FriendButton from '@/components/FriendButton';
-import { useAuth, useQuery } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { useNotifications } from '@/contexts/NotificationsContext';
@@ -30,9 +30,7 @@ export default function ProfilePage() {
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
 
   // Auth
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user, isPending: isAuthPending } = useAuth();
 
   // 1. Resolve Target User ID & Ownership
   // Explicit priority: Route Param > Current Session
@@ -97,6 +95,17 @@ export default function ProfilePage() {
   }, [fetchedPosts]);
 
   // 3. HARD GUARDS & DEFENSIVE RENDERING
+
+  // Guard: Auth Loading
+  if (isAuthPending) {
+    return (
+      <InstagramLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </InstagramLayout>
+    );
+  }
 
   // Guard A: No User ID resolved (Not logged in AND no param)
   if (!targetUserId) {

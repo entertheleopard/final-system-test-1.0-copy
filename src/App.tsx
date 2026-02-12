@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { StoriesProvider, useStories } from '@/contexts/StoriesContext';
-import { isMockMode } from '@/utils/mockMode';
 import { Toaster } from '@/components/ui/toaster';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
@@ -52,9 +50,7 @@ declare global {
 
 // Component to block rendering until auth is resolved
 function AuthLoadingGate({ children }: { children: React.ReactNode }) {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { isPending } = (isMockMode() ? mockAuth : realAuth)!;
+  const { isPending } = useAuth();
 
   // While auth is pending, we render nothing (or a loader).
   // The native splash screen (in index.html) covers this state.
@@ -66,9 +62,7 @@ function AuthLoadingGate({ children }: { children: React.ReactNode }) {
 }
 
 function AppInitializer() {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user, isPending } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user, isPending } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { viewerState } = useStories();

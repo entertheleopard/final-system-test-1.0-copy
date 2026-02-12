@@ -3,18 +3,18 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import { handleAvatarError } from '@/lib/utils';
 import { ArrowLeft, Send, Mic, Trash2, Play, Pause, X, Image as ImageIcon } from 'lucide-react';
-import { useAuth, useQuery, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
 import { useMockQuery } from '@/hooks/useMockQuery';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { isMockMode, MOCK_USERS } from '@/utils/mockMode';
-import { supabase } from '@/lib/supabase';
 import AudioMessageBubble from '@/components/chat/AudioMessageBubble';
 import FullscreenMediaModal from '@/components/FullscreenMediaModal';
 import type { Message, Conversation, Post } from '@/types/schema';
 import { cn } from '@/lib/utils';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AvatarImage } from '@/components/ui/AvatarImage';
+import { supabase } from '../../supabase';
 
 type RecordingState = 'idle' | 'recording' | 'preview';
 
@@ -51,7 +51,6 @@ export default function MessageThreadPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [messageText, setMessageText] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [pendingMessages, setPendingMessages] = useState<Message[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -85,9 +84,7 @@ export default function MessageThreadPage() {
     };
   }, []);
 
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user, isPending: isAuthPending } = useAuth();
 
   const isNewConversation = conversationId === 'new';
   const targetUserId = isNewConversation ? new URLSearchParams(location.search).get('userId') : null;
@@ -100,62 +97,20 @@ export default function MessageThreadPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch Messages from Supabase
-  useEffect(() => {
-    if (!conversationId || conversationId === 'new') return;
+  const queryParams = { 
+    where: { conversationId: conversationId || '' },
+    ...(isMockMode() ? { _t: refreshKey } : {}) 
+  };
 
-    const fetchMessages = async () => {
-      const { data, error } = await supabase
-        .from('Message')
-        .select('*')
-        .eq('conversationId', conversationId)
-        .order('createdAt', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching messages:', error);
-      } else if (data) {
-        setMessages(data as Message[]);
-      }
-    };
-
-    fetchMessages();
-
-    // Realtime Subscription
-    const channel = supabase
-      .channel('realtime-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Message',
-          filter: `conversationId=eq.${conversationId}`,
-        },
-        (payload) => {
-          // Append new message to state if it involves current user (implicit by conversationId filter)
-          setMessages((prev) => {
-            // Prevent duplicates
-            if (prev.some(m => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new as Message];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId]);
-
-  const allMessages = [...messages, ...pendingMessages];
+  const realMsgQuery = isMockMode() ? null : useQuery('Message', queryParams);
+  const mockMsgQuery = isMockMode() ? useMockQuery('Message', queryParams) : null;
+  const { data: messagesData } = (isMockMode() ? mockMsgQuery : realMsgQuery)!;
+  
+  const dbMessages = (messagesData || []) as Message[];
+  const messages = [...dbMessages, ...pendingMessages];
 
   const realMsgMutation = isMockMode() ? null : useMutation('Message');
   const mockMsgMutation = isMockMode() ? useMockMutation('Message') : null;
-  // We keep createMessage for mock mode fallback or if we want to use SDK for mutations
-  // But for this task we will try to use Supabase directly for consistency if possible, 
-  // or stick to SDK for mutations to ensure triggers work. 
-  // The prompt asked to "Connect... to Supabase" and "fetch messages".
-  // I'll use the SDK for mutations to keep it simple, as it writes to the same DB.
   const { create: createMessage } = (isMockMode() ? mockMsgMutation : realMsgMutation)!;
 
   const realConvMutation = isMockMode() ? null : useMutation('Conversation');
@@ -201,7 +156,7 @@ export default function MessageThreadPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [allMessages]);
+  }, [messages]);
 
   // --- CLEANUP ON UNMOUNT ---
   useEffect(() => {
@@ -505,7 +460,6 @@ export default function MessageThreadPage() {
         await createMessage({
           conversationId: activeConversationId,
           senderId: user.id,
-          receiverId: targetUserId || otherUserId || '',
           content: contentText,
           type: mediaType,
           mediaUrl: base64Url,
@@ -515,6 +469,7 @@ export default function MessageThreadPage() {
 
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     } catch (error) {
+      console.log(error);
       console.error('Failed to send media message:', error);
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     }
@@ -564,7 +519,6 @@ export default function MessageThreadPage() {
         await createMessage({
           conversationId: activeConversationId,
           senderId: user.id,
-          receiverId: targetUserId || otherUserId || '',
           content: 'Voice Message',
           type: 'audio',
           mediaUrl: audioUrl,
@@ -575,6 +529,7 @@ export default function MessageThreadPage() {
 
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     } catch (error) {
+      console.log(error);
       console.error('Failed to send audio message:', error);
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     }
@@ -590,16 +545,26 @@ export default function MessageThreadPage() {
       if (!messageText.trim()) return;
     }
 
-    if (!messageText.trim() || !user) return;
+    if (!messageText.trim()) return;
+
+    // Get authenticated user directly from Supabase
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (!authUser) {
+      console.error('User not authenticated');
+      return;
+    }
 
     const text = messageText;
     setMessageText('');
 
     const tempId = `temp-${Date.now()}`;
+    // Use authUser.id for optimistic update as well
     const optimisticMessage: Message = {
       id: tempId,
       conversationId: conversationId || 'temp',
-      senderId: user.id,
+      senderId: authUser.id,
+      receiverId: otherUserId || '',
       content: text,
       type: 'text',
       read: false,
@@ -615,7 +580,7 @@ export default function MessageThreadPage() {
 
       if (isNewConversation && targetUserId) {
         const newConv = await createConversation({
-          participantIds: [user.id, targetUserId],
+          participantIds: [authUser.id, targetUserId],
           lastMessage: text,
           lastMessageAt: new Date(),
           unreadCount: 1
@@ -630,25 +595,43 @@ export default function MessageThreadPage() {
         });
       }
 
-      if (activeConversationId) {
-        await createMessage({
+      if (activeConversationId && otherUserId) {
+        // Insert message using Supabase directly
+        const { error } = await supabase.from('Message').insert({
           conversationId: activeConversationId,
-          senderId: user.id,
-          receiverId: targetUserId || otherUserId || '',
+          senderId: authUser.id,
+          receiverId: otherUserId,
           content: text,
           type: 'text',
           read: false
         });
+
+        if (error) {
+          console.log(error);
+        }
       }
 
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
       scrollToBottom();
     } catch (error) {
+      console.log(error);
       console.error('Failed to send message:', error);
       setMessageText(text);
       setPendingMessages(prev => prev.filter(m => m.id !== tempId));
     }
   };
+
+  if (isAuthPending) {
+    return (
+      <InstagramLayout hideBottomNav>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </InstagramLayout>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <InstagramLayout hideBottomNav>
@@ -689,7 +672,7 @@ export default function MessageThreadPage() {
 
         {/* Messages List */}
         <div className="flex-1 overflow-y-auto p-4 pt-[76px] space-y-4 bg-background">
-          {allMessages.map((message) => {
+          {messages.map((message) => {
             const isMe = message.senderId === user?.id;
             return (
               <div

@@ -1,11 +1,11 @@
 import MainLayout from '@/components/MainLayout';
-import { useAuth } from '@animaapp/playground-react-sdk';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, Compass, User, Upload, MessageSquare, Radio } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
-  const { user, isPending } = useAuth({ requireAuth: true });
+  const { user, isPending } = useAuth();
 
   if (isPending) {
     return (

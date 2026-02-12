@@ -5,17 +5,13 @@ import PostDetailModal from '@/components/PostDetailModal';
 import { Search, X, User, Hash, TrendingUp } from 'lucide-react';
 import { handleAvatarError, handleImageError, getRandomMockImage } from '@/lib/utils';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Post } from '@/types/social';
 
 export default function SearchPage() {
   const navigate = useNavigate();
   const { createNotification } = useNotifications();
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'top' | 'accounts' | 'tags'>('top');

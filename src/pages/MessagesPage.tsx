@@ -1,173 +1,48 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import { handleAvatarError } from '@/lib/utils';
 import { ArrowLeft, Search } from 'lucide-react';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
-import { supabase } from '@/lib/supabase';
-import type { Message, UserProfile } from '@/types/schema';
-
-// Derived conversation type for UI
-type DerivedConversation = {
-  id: string;
-  participantId: string;
-  lastMessage: string;
-  lastMessageAt: Date;
-  unreadCount: number;
-};
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@animaapp/playground-react-sdk';
+import { useMockQuery } from '@/hooks/useMockQuery';
+import { isMockMode, MOCK_USERS } from '@/utils/mockMode';
+import type { Conversation } from '@/types/schema';
 
 export default function MessagesPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Ensure no auto-redirect logic exists here
+  
   // Auth
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user, isPending: isAuthPending } = useAuth();
 
-  // State
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const hasFetched = useRef(false);
+  // Fetch Conversations
+  const realQuery = isMockMode() ? null : useQuery('Conversation', { where: { participantIds: user?.id || '' } });
+  const mockQuery = isMockMode() ? useMockQuery('Conversation', { where: { participantIds: user?.id || '' } }) : null;
+  const { data: conversationsData, isPending } = (isMockMode() ? mockQuery : realQuery)!;
+  const conversations = (conversationsData || []) as Conversation[];
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!user || hasFetched.current) return;
-      setIsLoading(true);
-      
-      // Fetch messages where sender_id = current OR receiver_id = current
-      const { data: msgs, error } = await supabase
-        .from('Message')
-        .select('*')
-        .or(`senderId.eq.${user.id},receiverId.eq.${user.id}`)
-        .order('createdAt', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching messages:', error);
-      } else if (msgs) {
-        setMessages(msgs as Message[]);
-        hasFetched.current = true;
-
-        // Extract unique user IDs to fetch profiles
-        const userIds = new Set<string>();
-        msgs.forEach((m: Message) => {
-          if (m.senderId !== user.id) userIds.add(m.senderId);
-          if (m.receiverId !== user.id) userIds.add(m.receiverId);
-        });
-        
-        if (userIds.size > 0) {
-          const { data: profilesData } = await supabase
-            .from('UserProfile')
-            .select('*')
-            .in('userId', Array.from(userIds));
-            
-          if (profilesData) {
-            const profilesMap: Record<string, UserProfile> = {};
-            profilesData.forEach((p: UserProfile) => {
-              profilesMap[p.userId] = p;
-            });
-            setProfiles(profilesMap);
-          }
-        }
-      }
-      setIsLoading(false);
-    };
-
-    fetchMessages();
-
-    // Realtime listener for new messages
-    const channel = supabase
-      .channel('realtime-messages-inbox')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Message',
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          // Only add if relevant to current user
-          if (newMessage.senderId === user?.id || newMessage.receiverId === user?.id) {
-            setMessages((prev) => {
-              if (prev.some(m => m.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  // Derive conversations from messages
-  const derivedConversations: DerivedConversation[] = [];
-  const conversationMap = new Map<string, Message[]>();
-
-  messages.forEach(msg => {
-    // Group by conversationId if available, or fallback to partner ID logic
-    // Assuming conversationId is reliable
-    if (!conversationMap.has(msg.conversationId)) {
-      conversationMap.set(msg.conversationId, []);
-    }
-    conversationMap.get(msg.conversationId)?.push(msg);
-  });
-
-  conversationMap.forEach((msgs, convId) => {
-    // Sort messages by date (they should be already sorted by fetch, but good to be safe)
-    msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  // Helper to get other participant details
+  const getParticipant = (participantIds: string[]) => {
+    const otherId = participantIds.find(id => id !== user?.id);
+    if (!otherId) return { name: 'Unknown', avatar: '', username: 'unknown' };
     
-    const lastMsg = msgs[msgs.length - 1];
-    
-    // Determine the other participant
-    // If I am sender, other is receiver. If I am receiver, other is sender.
-    const otherId = lastMsg.senderId === user?.id ? lastMsg.receiverId : lastMsg.senderId;
-    
-    // Calculate unread count (messages I received that are not read)
-    const unreadCount = msgs.filter(m => m.receiverId === user?.id && !m.read).length;
-
-    if (otherId) {
-      derivedConversations.push({
-        id: convId,
-        participantId: otherId,
-        lastMessage: lastMsg.content || (lastMsg.type === 'image' ? 'Sent an image' : lastMsg.type === 'video' ? 'Sent a video' : 'Sent a message'),
-        lastMessageAt: new Date(lastMsg.createdAt),
-        unreadCount
-      });
-    }
-  });
-
-  // Sort conversations by last message time descending
-  derivedConversations.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
-
-  // Helper to get participant details
-  const getParticipant = (userId: string) => {
-    const profile = profiles[userId];
-    if (profile) {
-      return {
-        name: profile.username || 'User',
-        avatar: profile.profilePictureUrl || 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
-        username: profile.username || 'user'
-      };
-    }
-    return { name: 'User', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png', username: 'user' };
+    const found = MOCK_USERS.find(u => u.id === otherId);
+    return found || { name: 'User', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png', username: 'user' };
   };
 
-  const filteredConversations = derivedConversations.filter(conv => {
-    const participant = getParticipant(conv.participantId);
+  const filteredConversations = conversations.filter(conv => {
+    const participant = getParticipant(conv.participantIds);
     return participant.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
            participant.username?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const formatTime = (date: Date) => {
+    if (!date) return '';
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const diff = now.getTime() - new Date(date).getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -177,6 +52,18 @@ export default function MessagesPage() {
     if (days < 7) return `${days}d`;
     return `${Math.floor(days / 7)}w`;
   };
+
+  if (isAuthPending) {
+    return (
+      <InstagramLayout hideBottomNav>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </InstagramLayout>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <InstagramLayout hideBottomNav>
@@ -208,7 +95,7 @@ export default function MessagesPage() {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {isLoading && !hasFetched.current ? (
+          {isPending ? (
             <div className="p-4 text-center text-tertiary-foreground">Loading...</div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-tertiary-foreground">
@@ -217,7 +104,7 @@ export default function MessagesPage() {
             </div>
           ) : (
             filteredConversations.map((conv) => {
-              const participant = getParticipant(conv.participantId);
+              const participant = getParticipant(conv.participantIds);
               return (
                 <div
                   key={conv.id}
@@ -227,7 +114,7 @@ export default function MessagesPage() {
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <img
-                      src={participant.avatar}
+                      src={participant.profilePictureUrl || "https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png"}
                       alt={participant.name}
                       className="w-14 h-14 rounded-full object-cover border border-border"
                       onError={handleAvatarError}
@@ -241,12 +128,12 @@ export default function MessagesPage() {
                         {participant.name}
                       </p>
                       <span className="text-caption text-tertiary-foreground flex-shrink-0 ml-2">
-                        {formatTime(conv.lastMessageAt)}
+                        {formatTime(conv.lastMessageAt || conv.createdAt)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <p className={`text-body-sm truncate max-w-[90%] ${conv.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-tertiary-foreground'}`}>
-                        {conv.lastMessage}
+                        {conv.lastMessage || 'Started a conversation'}
                       </p>
                     </div>
                   </div>

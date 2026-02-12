@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useAuth } from '@animaapp/playground-react-sdk';
-import { useMockAuth } from '@/contexts/MockAuthContext';
-import { isMockMode } from '@/utils/mockMode';
+import { useAuth } from '@/contexts/AuthContext';
 import type { UserStory, StoryItem, StoryDuration } from '@/types/stories';
 
 type StoriesContextType = {
@@ -160,9 +158,7 @@ const INITIAL_STORIES: Record<string, UserStory> = {
 };
 
 export function StoriesProvider({ children }: { children: ReactNode }) {
-  const realAuth = isMockMode() ? null : useAuth();
-  const mockAuth = isMockMode() ? useMockAuth() : null;
-  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+  const { user } = useAuth();
   
   const [stories, setStories] = useState<Record<string, UserStory>>(INITIAL_STORIES);
 
