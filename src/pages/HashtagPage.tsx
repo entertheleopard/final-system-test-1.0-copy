@@ -1,0 +1,116 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import InstagramLayout from '@/components/InstagramLayout';
+import PostDetailModal from '@/components/PostDetailModal';
+import { ArrowLeft, Hash } from 'lucide-react';
+import { handleImageError, getRandomMockImage } from '@/lib/utils';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useAuth } from '@animaapp/playground-react-sdk';
+import { useMockAuth } from '@/contexts/MockAuthContext';
+import { isMockMode } from '@/utils/mockMode';
+import type { Post } from '@/types/social';
+
+export default function HashtagPage() {
+  const { tag } = useParams();
+  const navigate = useNavigate();
+  const { createNotification } = useNotifications();
+  const realAuth = isMockMode() ? null : useAuth();
+  const mockAuth = isMockMode() ? useMockAuth() : null;
+  const { user } = (isMockMode() ? mockAuth : realAuth)!;
+
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  // Mock posts for the hashtag
+  const [hashtagPosts, setHashtagPosts] = useState<Post[]>(() => 
+    Array.from({ length: 15 }).map((_, i) => ({
+      id: `tag-${i}`,
+      authorId: `user-${i}`,
+      authorName: `creator_${i}`,
+      authorAvatar: `https://c.animaapp.com/mlix9h3omwDIgk/img/ai_${(i % 5) + 1}.png`,
+      content: `Exploring #${tag} with amazing visuals!`,
+      mediaUrl: getRandomMockImage(i + 5),
+      mediaType: 'image',
+      likes: Math.floor(Math.random() * 2000) + 100,
+      comments: Math.floor(Math.random() * 50),
+      reposts: Math.floor(Math.random() * 20),
+      saves: Math.floor(Math.random() * 100),
+      isLiked: false,
+      isSaved: false,
+      createdAt: new Date(),
+    }))
+  );
+
+  const handleLike = (postId: string) => {
+    setHashtagPosts(currentPosts => currentPosts.map(post => {
+      if (post.id === postId) {
+        const isLiking = !post.isLiked;
+        if (isLiking && user) {
+          createNotification({
+            type: 'like',
+            fromUserId: user.id,
+            toUserId: post.authorId,
+            postId: post.id,
+            previewText: 'liked your post'
+          });
+        }
+        return { ...post, isLiked: isLiking, likes: isLiking ? post.likes + 1 : post.likes - 1 };
+      }
+      return post;
+    }));
+  };
+
+  return (
+    <InstagramLayout>
+      <div className="w-full max-w-2xl mx-auto h-screen flex flex-col bg-background">
+        {/* Header */}
+        <div className="flex items-center gap-4 p-4 border-b border-border">
+          <button 
+            onClick={() => navigate(-1)}
+            className="text-foreground hover:text-tertiary-foreground transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-h3 font-bold text-foreground flex items-center gap-1">
+              <Hash className="w-5 h-5" />
+              {tag}
+            </h1>
+            <p className="text-caption text-tertiary-foreground">1.2M posts</p>
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="flex-1 overflow-y-auto p-1">
+          <div className="grid grid-cols-3 gap-1">
+            {hashtagPosts.map(post => (
+              <div 
+                key={post.id} 
+                onClick={() => setSelectedPost(post)}
+                className="aspect-square relative group cursor-pointer bg-tertiary"
+              >
+                <img 
+                  src={post.mediaUrl} 
+                  alt={post.content} 
+                  className="w-full h-full object-cover"
+                  onError={handleImageError}
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          allPosts={hashtagPosts}
+          onClose={() => setSelectedPost(null)}
+          onLike={handleLike}
+          onRepost={() => {}}
+          onSave={() => {}}
+        />
+      )}
+    </InstagramLayout>
+  );
+}
