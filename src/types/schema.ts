@@ -92,6 +92,7 @@ export type Message = {
   id: string;
   conversationId: string;
   senderId: string;
+  receiverId: string;
   content: string;
   type?: 'text' | 'audio' | 'image' | 'video';
   mediaUrl?: string;
@@ -104,6 +105,7 @@ export type Message = {
 export type MessageDraft = {
   conversationId: string;
   senderId: string;
+  receiverId: string;
   content: string;
   type?: 'text' | 'audio' | 'image' | 'video';
   mediaUrl?: string;

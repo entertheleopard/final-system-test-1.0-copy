@@ -505,6 +505,7 @@ export default function MessageThreadPage() {
         await createMessage({
           conversationId: activeConversationId,
           senderId: user.id,
+          receiverId: targetUserId || otherUserId || '',
           content: contentText,
           type: mediaType,
           mediaUrl: base64Url,
@@ -563,6 +564,7 @@ export default function MessageThreadPage() {
         await createMessage({
           conversationId: activeConversationId,
           senderId: user.id,
+          receiverId: targetUserId || otherUserId || '',
           content: 'Voice Message',
           type: 'audio',
           mediaUrl: audioUrl,
@@ -632,6 +634,7 @@ export default function MessageThreadPage() {
         await createMessage({
           conversationId: activeConversationId,
           senderId: user.id,
+          receiverId: targetUserId || otherUserId || '',
           content: text,
           type: 'text',
           read: false

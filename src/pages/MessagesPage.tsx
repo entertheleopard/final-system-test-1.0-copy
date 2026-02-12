@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import { handleAvatarError } from '@/lib/utils';
@@ -7,7 +7,16 @@ import { useAuth } from '@animaapp/playground-react-sdk';
 import { useMockAuth } from '@/contexts/MockAuthContext';
 import { isMockMode } from '@/utils/mockMode';
 import { supabase } from '@/lib/supabase';
-import type { Conversation, UserProfile } from '@/types/schema';
+import type { Message, UserProfile } from '@/types/schema';
+
+// Derived conversation type for UI
+type DerivedConversation = {
+  id: string;
+  participantId: string;
+  lastMessage: string;
+  lastMessageAt: Date;
+  unreadCount: number;
+};
 
 export default function MessagesPage() {
   const navigate = useNavigate();
@@ -19,36 +28,41 @@ export default function MessagesPage() {
   const { user } = (isMockMode() ? mockAuth : realAuth)!;
 
   // State
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      if (!user) return;
+    const fetchMessages = async () => {
+      if (!user || hasFetched.current) return;
       setIsLoading(true);
       
-      // Fetch conversations where participantIds contains user.id
-      const { data: convs, error } = await supabase
-        .from('Conversation')
+      // Fetch messages where sender_id = current OR receiver_id = current
+      const { data: msgs, error } = await supabase
+        .from('Message')
         .select('*')
-        .contains('participantIds', [user.id])
-        .order('lastMessageAt', { ascending: false });
+        .or(`senderId.eq.${user.id},receiverId.eq.${user.id}`)
+        .order('createdAt', { ascending: true });
 
       if (error) {
-        console.error('Error fetching conversations:', error);
-      } else if (convs) {
-        setConversations(convs as Conversation[]);
+        console.error('Error fetching messages:', error);
+      } else if (msgs) {
+        setMessages(msgs as Message[]);
+        hasFetched.current = true;
 
-        // Fetch profiles for all participants
-        const allParticipantIds = Array.from(new Set(convs.flatMap((c: Conversation) => c.participantIds)));
-        const otherIds = allParticipantIds.filter(id => id !== user.id);
+        // Extract unique user IDs to fetch profiles
+        const userIds = new Set<string>();
+        msgs.forEach((m: Message) => {
+          if (m.senderId !== user.id) userIds.add(m.senderId);
+          if (m.receiverId !== user.id) userIds.add(m.receiverId);
+        });
         
-        if (otherIds.length > 0) {
+        if (userIds.size > 0) {
           const { data: profilesData } = await supabase
             .from('UserProfile')
             .select('*')
-            .in('userId', otherIds);
+            .in('userId', Array.from(userIds));
             
           if (profilesData) {
             const profilesMap: Record<string, UserProfile> = {};
@@ -62,20 +76,27 @@ export default function MessagesPage() {
       setIsLoading(false);
     };
 
-    fetchConversations();
+    fetchMessages();
 
-    // Realtime listener for new conversations or updates
+    // Realtime listener for new messages
     const channel = supabase
-      .channel('realtime-conversations')
+      .channel('realtime-messages-inbox')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'Conversation',
+          table: 'Message',
         },
-        () => {
-          fetchConversations();
+        (payload) => {
+          const newMessage = payload.new as Message;
+          // Only add if relevant to current user
+          if (newMessage.senderId === user?.id || newMessage.receiverId === user?.id) {
+            setMessages((prev) => {
+              if (prev.some(m => m.id === newMessage.id)) return prev;
+              return [...prev, newMessage];
+            });
+          }
         }
       )
       .subscribe();
@@ -85,32 +106,66 @@ export default function MessagesPage() {
     };
   }, [user]);
 
-  // Helper to get other participant details
-  const getParticipant = (participantIds: string[]) => {
-    const otherId = participantIds.find(id => id !== user?.id);
-    if (!otherId) return { name: 'Unknown', avatar: '', username: 'unknown' };
+  // Derive conversations from messages
+  const derivedConversations: DerivedConversation[] = [];
+  const conversationMap = new Map<string, Message[]>();
+
+  messages.forEach(msg => {
+    // Group by conversationId if available, or fallback to partner ID logic
+    // Assuming conversationId is reliable
+    if (!conversationMap.has(msg.conversationId)) {
+      conversationMap.set(msg.conversationId, []);
+    }
+    conversationMap.get(msg.conversationId)?.push(msg);
+  });
+
+  conversationMap.forEach((msgs, convId) => {
+    // Sort messages by date (they should be already sorted by fetch, but good to be safe)
+    msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     
-    const profile = profiles[otherId];
+    const lastMsg = msgs[msgs.length - 1];
+    
+    // Determine the other participant
+    // If I am sender, other is receiver. If I am receiver, other is sender.
+    const otherId = lastMsg.senderId === user?.id ? lastMsg.receiverId : lastMsg.senderId;
+    
+    // Calculate unread count (messages I received that are not read)
+    const unreadCount = msgs.filter(m => m.receiverId === user?.id && !m.read).length;
+
+    if (otherId) {
+      derivedConversations.push({
+        id: convId,
+        participantId: otherId,
+        lastMessage: lastMsg.content || (lastMsg.type === 'image' ? 'Sent an image' : lastMsg.type === 'video' ? 'Sent a video' : 'Sent a message'),
+        lastMessageAt: new Date(lastMsg.createdAt),
+        unreadCount
+      });
+    }
+  });
+
+  // Sort conversations by last message time descending
+  derivedConversations.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
+
+  // Helper to get participant details
+  const getParticipant = (userId: string) => {
+    const profile = profiles[userId];
     if (profile) {
       return {
-        name: profile.username || 'User', // Use username as name if name is missing
+        name: profile.username || 'User',
         avatar: profile.profilePictureUrl || 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
         username: profile.username || 'user'
       };
     }
-    
     return { name: 'User', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png', username: 'user' };
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    const participant = getParticipant(conv.participantIds);
+  const filteredConversations = derivedConversations.filter(conv => {
+    const participant = getParticipant(conv.participantId);
     return participant.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
            participant.username?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const formatTime = (dateStr: Date | string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
+  const formatTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
@@ -153,7 +208,7 @@ export default function MessagesPage() {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
+          {isLoading && !hasFetched.current ? (
             <div className="p-4 text-center text-tertiary-foreground">Loading...</div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-tertiary-foreground">
@@ -162,7 +217,7 @@ export default function MessagesPage() {
             </div>
           ) : (
             filteredConversations.map((conv) => {
-              const participant = getParticipant(conv.participantIds);
+              const participant = getParticipant(conv.participantId);
               return (
                 <div
                   key={conv.id}
@@ -186,12 +241,12 @@ export default function MessagesPage() {
                         {participant.name}
                       </p>
                       <span className="text-caption text-tertiary-foreground flex-shrink-0 ml-2">
-                        {formatTime(conv.lastMessageAt || conv.createdAt)}
+                        {formatTime(conv.lastMessageAt)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <p className={`text-body-sm truncate max-w-[90%] ${conv.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-tertiary-foreground'}`}>
-                        {conv.lastMessage || 'Started a conversation'}
+                        {conv.lastMessage}
                       </p>
                     </div>
                   </div>
