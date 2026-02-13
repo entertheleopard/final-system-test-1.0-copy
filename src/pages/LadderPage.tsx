@@ -175,7 +175,7 @@ export default function LadderPage() {
   const handleDelete = async (postId: string) => {
     console.log("handleDelete called for:", postId);
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this post? This cannot be undone."
+      "Are you sure you want to delete this post? This action cannot be undone."
     );
 
     if (!confirmDelete) return;

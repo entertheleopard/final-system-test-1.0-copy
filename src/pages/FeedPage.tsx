@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import PostCard from '@/components/PostCard';
@@ -8,6 +8,7 @@ import CommentsSheet from '@/components/CommentsSheet';
 import { useToast } from '@/hooks/use-toast';
 import { getRandomMockImage } from '@/lib/utils';
 import type { Post, Story } from '@/types/social';
+import { supabase } from '../../supabase';
 
 export default function FeedPage() {
   const navigate = useNavigate();
@@ -15,97 +16,40 @@ export default function FeedPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [commentPost, setCommentPost] = useState<Post | null>(null);
 
-  const stories: Story[] = [
-    {
-      id: '1',
-      userId: 'user1',
-      userName: 'creative_artist',
-      userAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      mediaUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      mediaType: 'image',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      isViewed: false,
-    },
-    {
-      id: '2',
-      userId: 'user2',
-      userName: 'digital_dreams',
-      userAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      mediaUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      mediaType: 'image',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      isViewed: true,
-    },
-  ];
+  const [stories, setStories] = useState<Story[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
 
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 'live-1',
-      authorId: 'user_live',
-      authorName: 'live_creator',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      content: '🔴 LIVE NOW: Digital Art Workshop! Join in!',
-      mediaUrl: getRandomMockImage(3),
-      mediaType: 'image',
-      likes: 542,
-      comments: 120,
-      reposts: 15,
-      saves: 40,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: '1',
-      authorId: 'user1',
-      authorName: 'creative_artist',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'Exploring new dimensions of digital art 🎨✨',
-      mediaUrl: getRandomMockImage(4),
-      mediaType: 'image',
-      likes: 1234,
-      comments: 89,
-      reposts: 45,
-      saves: 234,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    },
-    {
-      id: '2',
-      authorId: 'user2',
-      authorName: 'digital_dreams',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      content: 'Abstract thoughts manifested 💭',
-      mediaUrl: getRandomMockImage(5),
-      mediaType: 'image',
-      likes: 892,
-      comments: 56,
-      reposts: 23,
-      saves: 178,
-      isLiked: true,
-      isSaved: false,
-      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    },
-    {
-      id: '3',
-      authorId: 'user3',
-      authorName: 'modern_creator',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      content: 'Geometric harmony in motion',
-      mediaUrl: getRandomMockImage(6),
-      mediaType: 'image',
-      likes: 2341,
-      comments: 145,
-      reposts: 67,
-      saves: 456,
-      isLiked: false,
-      isSaved: true,
-      createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
-    },
-  ]);
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*, profiles(username, avatar_url)")
+        .eq("archived", false)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        const mappedPosts: Post[] = data.map((p: any) => ({
+          id: p.id,
+          authorId: p.user_id,
+          authorName: p.profiles?.username || 'Unknown',
+          authorAvatar: p.profiles?.avatar_url || '',
+          content: p.content,
+          mediaUrl: p.media_url,
+          mediaType: p.media_type || 'image',
+          likes: p.likes || 0,
+          comments: p.comments || 0,
+          reposts: p.reposts || 0,
+          saves: p.saves || 0,
+          isLiked: false,
+          isSaved: false,
+          createdAt: new Date(p.created_at),
+        }));
+        setPosts(mappedPosts);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   const handleLike = (postId: string) => {
     setPosts(posts.map(post =>
@@ -150,18 +94,62 @@ export default function FeedPage() {
     ));
   };
 
-  const handleAddStory = () => {
-    toast({
-      title: 'Add Story',
-      description: 'Story creation coming soon!',
-    });
+  const handleDelete = async (postId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post? This action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast({
+        title: "Post deleted",
+        description: "The post has been permanently deleted."
+      });
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleStoryClick = (story: Story) => {
-    toast({
-      title: 'Story Viewer',
-      description: 'Story viewing coming soon!',
-    });
+  const handleArchive = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ archived: true })
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast({
+        title: "Post archived",
+        description: "The post has been moved to your archive."
+      });
+    } catch (error) {
+      console.error("Archive failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to archive post.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddStory = () => {
+    navigate('/stories/create');
   };
 
   return (
@@ -174,8 +162,7 @@ export default function FeedPage() {
             {stories.map(story => (
               <StoryCircle
                 key={story.id}
-                story={story}
-                onClick={() => handleStoryClick(story)}
+                userId={story.userId}
               />
             ))}
           </div>
@@ -192,6 +179,8 @@ export default function FeedPage() {
               onRepost={handleRepost}
               onSave={handleSave}
               onMediaClick={handleMediaClick}
+              onDelete={handleDelete}
+              onArchive={handleArchive}
             />
           ))}
         </div>

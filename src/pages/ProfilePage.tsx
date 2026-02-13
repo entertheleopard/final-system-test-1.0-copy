@@ -32,6 +32,12 @@ export default function ProfilePage() {
   // Auth
   const { user, isPending: isAuthPending } = useAuth();
 
+  // Debug logging for route params
+  useEffect(() => {
+    console.log('ProfilePage: Route param userId:', paramUserId);
+    console.log('ProfilePage: Current auth user id:', user?.id);
+  }, [paramUserId, user?.id]);
+
   // 1. Resolve Target User ID & Ownership
   // Explicit priority: Route Param > Current Session
   const targetUserId = paramUserId ?? user?.id;
@@ -134,12 +140,14 @@ export default function ProfilePage() {
   }
 
   // Guard C: Profile Not Found (ID exists but no data)
-  // We only show 404 if we can't fallback to the 'user' object (which we can for own profile)
-  if (!userProfile && !isOwnProfile) {
+  // We check if we have a DB profile OR if it's the current user (fallback to auth data)
+  const hasProfileData = !!userProfile || (isOwnProfile && !!user);
+
+  if (!hasProfileData) {
     return (
       <InstagramLayout>
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
-          <h2 className="text-h2 font-semibold text-foreground mb-2">Profile Not Found</h2>
+          <h2 className="text-h2 font-semibold text-foreground mb-2">User not found</h2>
           <p className="text-body text-tertiary-foreground mb-6">
             The user you are looking for does not exist or may have been removed.
           </p>

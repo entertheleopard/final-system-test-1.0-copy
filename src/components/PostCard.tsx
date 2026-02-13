@@ -268,10 +268,7 @@ function PostCard({
                 <span>Archive</span>
               </button>
               <button
-                onClick={() => {
-                  console.log("Delete button clicked for:", post.id);
-                  onDelete?.(post.id);
-                }}
+                onClick={() => onDelete?.(post.id)}
                 className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground gap-2 text-error"
               >
                 <Trash2 className="w-4 h-4" />
