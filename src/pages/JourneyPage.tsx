@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import PostDetailModal from '@/components/PostDetailModal';
 import JourneyGridItem from '@/components/JourneyGridItem';
 import { useToast } from '@/hooks/use-toast';
-import { getRandomMockImage } from '@/lib/utils';
-import { Search } from 'lucide-react';
+import { Search, AlertCircle, Loader2 } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Post } from '@/types/social';
+import { supabase } from '../../supabase';
+import { Button } from '@/components/ui/button';
 
 export default function JourneyPage() {
   const navigate = useNavigate();
@@ -17,105 +18,64 @@ export default function JourneyPage() {
   const { user } = useAuth();
   
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [explorePosts, setExplorePosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [explorePosts, setExplorePosts] = useState<Post[]>([
-    {
-      id: 'e1',
-      authorId: 'user1',
-      authorName: 'creative_artist',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'Discover amazing art',
-      mediaUrl: getRandomMockImage(5), // Landscape
-      mediaType: 'image',
-      likes: 5432,
-      comments: 234,
-      reposts: 89,
-      saves: 678,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 'e2',
-      authorId: 'user2',
-      authorName: 'digital_dreams',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      content: 'Trending now',
-      mediaUrl: getRandomMockImage(6), // Portrait
-      mediaType: 'image',
-      likes: 3421,
-      comments: 156,
-      reposts: 67,
-      saves: 445,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 'e3',
-      authorId: 'user3',
-      authorName: 'modern_creator',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      content: 'Popular this week',
-      mediaUrl: getRandomMockImage(7), // Square
-      mediaType: 'image',
-      likes: 6789,
-      comments: 345,
-      reposts: 123,
-      saves: 890,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 'e4',
-      authorId: 'user4',
-      authorName: 'visual_artist',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png',
-      content: 'Explore creativity',
-      mediaUrl: getRandomMockImage(8), // Abstract
-      mediaType: 'image',
-      likes: 4567,
-      comments: 189,
-      reposts: 78,
-      saves: 567,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 'e5',
-      authorId: 'user5',
-      authorName: 'art_enthusiast',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
-      content: 'Featured content',
-      mediaUrl: getRandomMockImage(9), // Neon
-      mediaType: 'image',
-      likes: 7890,
-      comments: 456,
-      reposts: 234,
-      saves: 1234,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 'e6',
-      authorId: 'user6',
-      authorName: 'design_master',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'Inspiration daily',
-      mediaUrl: getRandomMockImage(0),
-      mediaType: 'image',
-      likes: 2345,
-      comments: 123,
-      reposts: 45,
-      saves: 345,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-  ]);
+  const fetchTrendingPosts = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Calculate 24 hours ago
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles (
+            username,
+            avatar_url
+          )
+        `)
+        .gte('created_at', twentyFourHoursAgo)
+        .gte('likes', 3)
+        .order('likes', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedPosts: Post[] = data.map((p: any) => ({
+          id: p.id,
+          authorId: p.user_id,
+          authorName: p.profiles?.username || 'Unknown',
+          authorAvatar: p.profiles?.avatar_url || '',
+          content: p.content,
+          mediaUrl: p.media_url,
+          mediaType: p.media_type || 'image',
+          likes: p.likes || 0,
+          comments: p.comments || 0,
+          reposts: p.reposts || 0,
+          saves: p.saves || 0,
+          isLiked: false, // TODO: Implement user-specific like check
+          isSaved: false,
+          isArchived: false,
+          createdAt: new Date(p.created_at),
+        }));
+        setExplorePosts(mappedPosts);
+      }
+    } catch (err: any) {
+      console.error('Error fetching trending posts:', err);
+      setError(err.message || 'Failed to load trending posts');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrendingPosts();
+  }, []);
 
   const handleLike = (postId: string) => {
     setExplorePosts(currentPosts => currentPosts.map(post => {
@@ -169,16 +129,40 @@ export default function JourneyPage() {
           </button>
         </div>
 
-        {/* Masonry Layout */}
-        <div className="columns-2 md:columns-3 gap-1 sm:gap-2 space-y-1 sm:space-y-2">
-          {explorePosts.map(post => (
-            <JourneyGridItem 
-              key={post.id} 
-              post={post} 
-              onClick={setSelectedPost} 
-            />
-          ))}
-        </div>
+        {/* Content */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="bg-error/10 p-4 rounded-full mb-4">
+              <AlertCircle className="w-8 h-8 text-error" />
+            </div>
+            <h3 className="text-body font-semibold text-foreground mb-2">Unable to load trending posts</h3>
+            <p className="text-body-sm text-tertiary-foreground mb-6">
+              {error}
+            </p>
+            <Button onClick={fetchTrendingPosts} variant="outline" className="border-border hover:bg-tertiary">
+              Try Again
+            </Button>
+          </div>
+        ) : explorePosts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-body text-tertiary-foreground">No trending posts found in the last 24 hours.</p>
+          </div>
+        ) : (
+          /* Masonry Layout */
+          <div className="columns-2 md:columns-3 gap-1 sm:gap-2 space-y-1 sm:space-y-2">
+            {explorePosts.map(post => (
+              <JourneyGridItem 
+                key={post.id} 
+                post={post} 
+                onClick={setSelectedPost} 
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Post Detail Modal */}

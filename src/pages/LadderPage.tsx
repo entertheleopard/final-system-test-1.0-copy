@@ -7,8 +7,7 @@ import StoryCircle from '@/components/StoryCircle';
 import CommentsSheet from '@/components/CommentsSheet';
 import { useStories } from '@/contexts/StoriesContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation } from '@animaapp/playground-react-sdk';
-import { useMockQuery } from '@/hooks/useMockQuery';
+import { useMutation } from '@animaapp/playground-react-sdk';
 import { useMockMutation } from '@/hooks/useMockMutation';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { isMockMode } from '@/utils/mockMode';
@@ -16,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Layers, MessageCircle } from 'lucide-react';
 import type { Post } from '@/types/social';
+import { supabase } from '../../supabase';
 
 export default function LadderPage() {
   const navigate = useNavigate();
@@ -24,39 +24,71 @@ export default function LadderPage() {
   const { createNotification } = useNotifications();
   const { user } = useAuth();
 
-  // Fetch Posts - Global feed, no author filtering
-  const realQuery = isMockMode() ? null : useQuery('Post', { orderBy: { createdAt: 'desc' } });
-  const mockQuery = isMockMode() ? useMockQuery('Post', { orderBy: { createdAt: 'desc' } }) : null;
-  const { data: fetchedPosts, isPending: isLoading, error } = (isMockMode() ? mockQuery : realQuery)!;
+  // Local state for posts
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  // Mutations
+  // Mutations (keep for delete/archive actions if they use SDK, or replace later)
   const realMutation = isMockMode() ? null : useMutation('Post');
   const mockMutation = isMockMode() ? useMockMutation('Post') : null;
   const { update, remove } = (isMockMode() ? mockMutation : realMutation)!;
 
   const [commentPost, setCommentPost] = useState<Post | null>(null);
-  
-  // Local state to handle optimistic updates (likes, etc.)
-  const [localPosts, setLocalPosts] = useState<Post[]>([]);
 
+  // Fetch Posts from Supabase
   useEffect(() => {
-    if (fetchedPosts) {
-      // Map schema Post to UI Post type if needed, or just use as is
-      // Ensure we have the isLiked/isSaved flags (mocked for now as schema doesn't have user-specific interaction tables yet)
-      // Filter out archived posts
-      const mappedPosts = fetchedPosts
-        .filter((p: any) => !p.isArchived)
-        .map((p: any) => ({
-          ...p,
-          isLiked: false, // Default for now
-          isSaved: false,
-        }));
-      setLocalPosts(mappedPosts);
-    }
-  }, [fetchedPosts]);
+    const fetchPosts = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch posts with profile data
+        const { data, error } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles (
+              username,
+              avatar_url
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          const mappedPosts: Post[] = data.map((p: any) => ({
+            id: p.id,
+            authorId: p.user_id,
+            authorName: p.profiles?.username || 'Unknown',
+            authorAvatar: p.profiles?.avatar_url || '',
+            content: p.content,
+            mediaUrl: p.media_url,
+            mediaType: p.media_type || 'image',
+            likes: p.likes || 0,
+            comments: p.comments || 0,
+            reposts: p.reposts || 0,
+            saves: p.saves || 0,
+            isLiked: false, // TODO: Implement user-specific like check
+            isSaved: false,
+            isArchived: false,
+            createdAt: new Date(p.created_at),
+          }));
+          setLocalPosts(mappedPosts);
+        }
+      } catch (err) {
+        console.error('Error fetching posts:', err);
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   const handleRetry = () => {
-    window.location.reload(); // Simple retry for now
+    window.location.reload();
   };
 
   // Filter stories to show only those with active items

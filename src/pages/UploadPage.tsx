@@ -7,9 +7,7 @@ import VideoEditor from '@/components/upload/VideoEditor';
 import CaptionEditor from '@/components/upload/CaptionEditor';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMutation } from '@animaapp/playground-react-sdk';
-import { useMockMutation } from '@/hooks/useMockMutation';
-import { isMockMode } from '@/utils/mockMode';
+import { supabase } from '../../supabase';
 import { cn } from '@/lib/utils';
 import type { MediaFile, EditedMedia } from '@/types/upload';
 
@@ -22,14 +20,10 @@ export default function UploadPage() {
   // Auth
   const { user, isPending: isAuthPending } = useAuth();
 
-  // Mutation
-  const realMutation = isMockMode() ? null : useMutation('Post');
-  const mockMutation = isMockMode() ? useMockMutation('Post') : null;
-  const { create, isPending } = (isMockMode() ? mockMutation : realMutation)!;
-
   const [currentStep, setCurrentStep] = useState<UploadStep>('select');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile[]>([]);
   const [editedMedia, setEditedMedia] = useState<EditedMedia[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleMediaSelected = (files: MediaFile[]) => {
     setSelectedMedia(files);
@@ -44,34 +38,37 @@ export default function UploadPage() {
   const handlePublish = async (caption: string, location?: string, tags?: string[]) => {
     if (!user || editedMedia.length === 0) return;
 
+    setIsPublishing(true);
     try {
       const mediaItem = editedMedia[0];
       
-      await create({
-        authorId: user.id,
-        authorName: user.name || 'User',
-        authorAvatar: user.profilePictureUrl || 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
         content: caption,
-        mediaUrl: mediaItem.finalUrl,
-        mediaType: mediaItem.type,
+        media_url: mediaItem.finalUrl,
+        media_type: mediaItem.type,
         likes: 0,
         comments: 0,
         reposts: 0,
         saves: 0
       });
 
+      if (error) throw error;
+
       toast({
         title: 'Post published',
         description: 'Your post has been shared successfully',
       });
       navigate('/ladder');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to publish post:', error);
       toast({
         title: 'Error',
-        description: 'Failed to publish post. Please try again.',
+        description: error.message || 'Failed to publish post. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -137,6 +134,7 @@ export default function UploadPage() {
               media={editedMedia}
               onPublish={handlePublish}
               onBack={handleBack}
+              isPublishing={isPublishing}
             />
           </div>
         )}

@@ -8,9 +8,10 @@ interface CaptionEditorProps {
   media: EditedMedia[];
   onPublish: (caption: string, location?: string, tags?: string[]) => void;
   onBack: () => void;
+  isPublishing?: boolean;
 }
 
-export default function CaptionEditor({ media, onPublish, onBack }: CaptionEditorProps) {
+export default function CaptionEditor({ media, onPublish, onBack, isPublishing = false }: CaptionEditorProps) {
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
@@ -30,9 +31,10 @@ export default function CaptionEditor({ media, onPublish, onBack }: CaptionEdito
         <h1 className="text-h3 font-semibold text-foreground">New Post</h1>
         <Button
           onClick={handlePublish}
-          className="bg-gradient-primary text-primary-foreground hover:opacity-90"
+          disabled={isPublishing}
+          className="bg-gradient-primary text-primary-foreground hover:opacity-90 disabled:opacity-70"
         >
-          Post
+          {isPublishing ? 'Posting...' : 'Post'}
         </Button>
       </header>
 

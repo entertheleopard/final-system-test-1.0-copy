@@ -54,17 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return supabase.auth.signInWithPassword({ email, password });
   };
 
-  const signup = (email: string, password: string) => {
-    return supabase.auth.signUp({
+  const signup = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: email.split('@')[0],
-          username: email.split('@')[0],
-        }
-      }
     });
+
+    if (data.user) {
+      await supabase.from("profiles").insert({
+        id: data.user.id,
+        username: email.split("@")[0],
+        full_name: email.split("@")[0],
+      });
+    }
+
+    return { data, error };
   };
 
   const logout = async () => {
