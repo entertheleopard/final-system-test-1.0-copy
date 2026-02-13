@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Upload, Music, ExternalLink } from 'lucide-react';
 export default function ProfileMusicPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [autoplay, setAutoplay] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'external'>('file');
 
@@ -19,7 +21,9 @@ export default function ProfileMusicPage() {
       title: 'Music Updated',
       description: 'Your profile music has been updated.',
     });
-    navigate('/profile');
+    if (user) {
+      navigate(`/profile/${user.id}`);
+    }
   };
 
   return (
@@ -154,7 +158,7 @@ export default function ProfileMusicPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/settings')}
+              onClick={() => user ? navigate(`/profile/${user.id}`) : navigate('/settings')}
               className="h-12 px-8 border-border hover:bg-tertiary"
             >
               Cancel

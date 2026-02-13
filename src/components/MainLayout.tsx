@@ -54,7 +54,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             
             // Redirect "Live" sidebar item to the Live Feed (Watch mode)
             // Broadcasting is only allowed from the Upload flow
-            const targetPath = item.path === '/live' ? '/live/feed' : item.path;
+            let targetPath = item.path === '/live' ? '/live/feed' : item.path;
+
+            // Fix Profile Navigation
+            if (item.path === '/profile' && user) {
+              targetPath = `/profile/${user.id}`;
+            }
 
             return (
               <Link

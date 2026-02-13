@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const quickLinks = [
     { path: '/feed', icon: Compass, label: 'Explore Feed', color: 'text-primary' },
     { path: '/journey', icon: Compass, label: 'Your Journey', color: 'text-accent' },
-    { path: '/profile', icon: User, label: 'View Profile', color: 'text-info' },
+    { path: user ? `/profile/${user.id}` : '/auth/login', icon: User, label: 'View Profile', color: 'text-info' },
     { path: '/upload', icon: Upload, label: 'Upload Art', color: 'text-success' },
     { path: '/comments', icon: MessageSquare, label: 'Comments', color: 'text-warning' },
     { path: '/live', icon: Radio, label: 'Live Streams', color: 'text-error' },

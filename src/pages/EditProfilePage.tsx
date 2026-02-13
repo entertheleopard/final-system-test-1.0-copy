@@ -116,7 +116,11 @@ export default function EditProfilePage() {
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
       });
-      navigate('/profile');
+      if (user) {
+        navigate(`/profile/${user.id}`);
+      } else {
+        navigate('/ladder');
+      }
     } catch (error) {
       console.error('❌ Save Failed:', error);
       toast({
@@ -284,7 +288,7 @@ export default function EditProfilePage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/profile')}
+              onClick={() => user ? navigate(`/profile/${user.id}`) : navigate('/ladder')}
               disabled={isSaving}
               className="h-12 px-8 border-border hover:bg-tertiary"
             >

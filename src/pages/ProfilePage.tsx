@@ -118,11 +118,11 @@ export default function ProfilePage() {
     return (
       <InstagramLayout>
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
-          <h2 className="text-h2 font-semibold text-foreground mb-2">Log In Required</h2>
+          <h2 className="text-h2 font-semibold text-foreground mb-2">Invalid profile</h2>
           <p className="text-body text-tertiary-foreground mb-6">
-            Please log in to view your profile.
+            User ID is missing.
           </p>
-          <Button onClick={() => navigate('/auth/login')}>Log In</Button>
+          <Button onClick={() => navigate('/ladder')}>Go Home</Button>
         </div>
       </InstagramLayout>
     );

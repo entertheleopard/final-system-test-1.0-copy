@@ -156,17 +156,19 @@ export default function FeedPage() {
     <InstagramLayout>
       <div className="w-full max-w-2xl mx-auto py-4 px-4 sm:py-6 lg:py-8">
         {/* Stories */}
-        <div className="bg-white border border-border rounded-lg p-4 mb-6">
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            <StoryCircle isAddStory onClick={handleAddStory} />
-            {stories.map(story => (
-              <StoryCircle
-                key={story.id}
-                userId={story.userId}
-              />
-            ))}
+        {stories.length > 0 && (
+          <div className="bg-white border border-border rounded-lg p-4 mb-6">
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              <StoryCircle isAddStory onClick={handleAddStory} />
+              {stories.map(story => (
+                <StoryCircle
+                  key={story.id}
+                  userId={story.userId}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Feed */}
         <div>

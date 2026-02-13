@@ -74,10 +74,14 @@ export default function InstagramLayout({ children, hideBottomNav = false }: Ins
                 }
               }
 
+              const targetPath = item.path === '/profile' && user 
+                ? `/profile/${user.id}` 
+                : item.path;
+
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={targetPath}
                   className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
                     isActive ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-tertiary'
                   }`}
@@ -137,11 +141,15 @@ export default function InstagramLayout({ children, hideBottomNav = false }: Ins
                     isActive = false;
                   }
                 }
+
+                const targetPath = item.path === '/profile' && user 
+                  ? `/profile/${user.id}` 
+                  : item.path;
                 
                 return (
                   <Link
                     key={item.path}
-                    to={item.path}
+                    to={targetPath}
                     className="flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors active:scale-95"
                     aria-label={item.label}
                   >

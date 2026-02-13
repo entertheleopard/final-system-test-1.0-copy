@@ -97,6 +97,8 @@ function AppInitializer() {
 }
 
 function App() {
+  const { user } = useAuth();
+
   return (
     <Router>
       <StoriesProvider>
@@ -118,8 +120,14 @@ function App() {
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:conversationId" element={<MessageThreadPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          
+          {/* Safe Profile Route */}
+          <Route 
+            path="/profile" 
+            element={user ? <Navigate to={`/profile/${user.id}`} replace /> : <Navigate to="/auth/login" replace />} 
+          />
           <Route path="/profile/:userId" element={<ProfilePage />} />
+          
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/edit-profile" element={<EditProfilePage />} />
           <Route path="/settings/insights" element={<AccountInsightsPage />} />
