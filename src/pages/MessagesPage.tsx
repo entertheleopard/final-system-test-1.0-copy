@@ -1,48 +1,116 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import InstagramLayout from '@/components/InstagramLayout';
 import { handleAvatarError } from '@/lib/utils';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@animaapp/playground-react-sdk';
-import { useMockQuery } from '@/hooks/useMockQuery';
-import { isMockMode, MOCK_USERS } from '@/utils/mockMode';
-import type { Conversation } from '@/types/schema';
+import { supabase } from '../../supabase';
+
+// Define a local type for the conversation summary we'll display
+type ConversationSummary = {
+  id: string; // conversation_id
+  otherUserId: string;
+  otherUserName: string;
+  otherUserAvatar: string;
+  lastMessage: string;
+  lastMessageAt: Date;
+  unreadCount: number;
+};
 
 export default function MessagesPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Ensure no auto-redirect logic exists here
-  
   // Auth
   const { user, isPending: isAuthPending } = useAuth();
 
-  // Fetch Conversations
-  const realQuery = isMockMode() ? null : useQuery('Conversation', { where: { participantIds: user?.id || '' } });
-  const mockQuery = isMockMode() ? useMockQuery('Conversation', { where: { participantIds: user?.id || '' } }) : null;
-  const { data: conversationsData, isPending } = (isMockMode() ? mockQuery : realQuery)!;
-  const conversations = (conversationsData || []) as Conversation[];
+  useEffect(() => {
+    if (isAuthPending) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-  // Helper to get other participant details
-  const getParticipant = (participantIds: string[]) => {
-    const otherId = participantIds.find(id => id !== user?.id);
-    if (!otherId) return { name: 'Unknown', avatar: '', username: 'unknown' };
-    
-    // In a real app, we would fetch the user profile here or have it included in the conversation data
-    return { name: 'User', avatar: '', username: 'user' };
-  };
+    const fetchMessages = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch all messages where the current user is sender or receiver
+        const { data: messages, error: msgError } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            sender:profiles!sender_id(username, avatar_url),
+            receiver:profiles!receiver_id(username, avatar_url)
+          `)
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
 
-  const filteredConversations = conversations.filter(conv => {
-    const participant = getParticipant(conv.participantIds);
-    return participant.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           participant.username?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+        if (msgError) throw msgError;
+
+        if (!messages) {
+          setConversations([]);
+          return;
+        }
+
+        // Group by conversation_id to find the latest message for each chat
+        const conversationMap = new Map<string, ConversationSummary>();
+
+        for (const msg of messages) {
+          // Use conversation_id if available, otherwise fallback to logic (though schema implies it exists)
+          // If conversation_id is missing, we might need to generate a key based on participants
+          const convId = msg.conversation_id;
+          
+          if (!convId) continue; // Skip if no conversation ID (shouldn't happen with proper schema)
+
+          if (!conversationMap.has(convId)) {
+            // Determine the "other" user
+            const isSender = msg.sender_id === user.id;
+            const otherId = isSender ? msg.receiver_id : msg.sender_id;
+            
+            // Get profile info from the joined data
+            // Note: Supabase returns arrays or objects depending on relationship. 
+            // Assuming single object for foreign key.
+            const otherProfile = isSender ? msg.receiver : msg.sender;
+            
+            const otherName = otherProfile?.username || 'Unknown User';
+            const otherAvatar = otherProfile?.avatar_url || '';
+
+            conversationMap.set(convId, {
+              id: convId,
+              otherUserId: otherId,
+              otherUserName: otherName,
+              otherUserAvatar: otherAvatar,
+              lastMessage: msg.content || (msg.media_url ? 'Sent an attachment' : ''),
+              lastMessageAt: new Date(msg.created_at),
+              unreadCount: 0, // TODO: Calculate real unread count if needed
+            });
+          }
+        }
+
+        setConversations(Array.from(conversationMap.values()));
+      } catch (err: any) {
+        console.error('Error fetching conversations:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [user, isAuthPending]);
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.otherUserName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const formatTime = (date: Date) => {
     if (!date) return '';
     const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
+    const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -57,7 +125,7 @@ export default function MessagesPage() {
     return (
       <InstagramLayout hideBottomNav>
         <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </InstagramLayout>
     );
@@ -95,56 +163,55 @@ export default function MessagesPage() {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {isPending ? (
-            <div className="p-4 text-center text-tertiary-foreground">Loading...</div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-tertiary-foreground" />
+            </div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-tertiary-foreground">
               <p>No messages yet.</p>
               <p className="text-sm mt-2">Start a conversation from a profile.</p>
             </div>
           ) : (
-            filteredConversations.map((conv) => {
-              const participant = getParticipant(conv.participantIds);
-              return (
-                <div
-                  key={conv.id}
-                  onClick={() => navigate(`/messages/${conv.id}`)}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-tertiary/30 active:bg-tertiary/50 transition-colors cursor-pointer"
-                >
-                  {/* Avatar */}
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={participant.profilePictureUrl || "https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png"}
-                      alt={participant.name}
-                      className="w-14 h-14 rounded-full object-cover border border-border"
-                      onError={handleAvatarError}
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <p className={`text-body-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-foreground' : 'font-medium text-foreground'}`}>
-                        {participant.name}
-                      </p>
-                      <span className="text-caption text-tertiary-foreground flex-shrink-0 ml-2">
-                        {formatTime(conv.lastMessageAt || conv.createdAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <p className={`text-body-sm truncate max-w-[90%] ${conv.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-tertiary-foreground'}`}>
-                        {conv.lastMessage || 'Started a conversation'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Unread Badge */}
-                  {conv.unreadCount > 0 && (
-                    <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0" />
-                  )}
+            filteredConversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => navigate(`/messages/${conv.id}`)}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-tertiary/30 active:bg-tertiary/50 transition-colors cursor-pointer"
+              >
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={conv.otherUserAvatar || "https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png"}
+                    alt={conv.otherUserName}
+                    className="w-14 h-14 rounded-full object-cover border border-border"
+                    onError={handleAvatarError}
+                  />
                 </div>
-              );
-            })
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline mb-0.5">
+                    <p className={`text-body-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-foreground' : 'font-medium text-foreground'}`}>
+                      {conv.otherUserName}
+                    </p>
+                    <span className="text-caption text-tertiary-foreground flex-shrink-0 ml-2">
+                      {formatTime(conv.lastMessageAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <p className={`text-body-sm truncate max-w-[90%] ${conv.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-tertiary-foreground'}`}>
+                      {conv.lastMessage || 'Started a conversation'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Unread Badge */}
+                {conv.unreadCount > 0 && (
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0" />
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
