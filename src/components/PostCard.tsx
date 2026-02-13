@@ -260,20 +260,23 @@ function PostCard({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem 
+              <button
                 onClick={() => onArchive?.(post.id)}
-                className="gap-2 cursor-pointer"
+                className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground gap-2"
               >
                 <Archive className="w-4 h-4" />
                 <span>Archive</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onDelete?.(post.id)}
-                className="gap-2 text-error focus:text-error cursor-pointer"
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Delete button clicked for:", post.id);
+                  onDelete?.(post.id);
+                }}
+                className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground gap-2 text-error"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete</span>
-              </DropdownMenuItem>
+              </button>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

@@ -173,35 +173,59 @@ export default function LadderPage() {
   }, [navigate]);
 
   const handleDelete = async (postId: string) => {
+    console.log("handleDelete called for:", postId);
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post? This cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
     try {
-      await remove(postId);
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      console.log("Post deleted successfully:", postId);
       setLocalPosts(prev => prev.filter(p => p.id !== postId));
       toast({
-        title: 'Post deleted',
-        description: 'Your post has been permanently deleted.',
+        title: "Post deleted",
+        description: "The post has been permanently deleted."
       });
     } catch (error) {
+      console.error("Delete failed:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete post.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete post.",
+        variant: "destructive"
       });
     }
   };
 
   const handleArchive = async (postId: string) => {
+    console.log("handleArchive called for:", postId);
     try {
-      await update(postId, { isArchived: true });
+      const { error } = await supabase
+        .from("posts")
+        .update({ archived: true })
+        .eq("id", postId);
+
+      if (error) throw error;
+
+      console.log("Post archived successfully:", postId);
       setLocalPosts(prev => prev.filter(p => p.id !== postId));
       toast({
-        title: 'Post archived',
-        description: 'Post moved to your archive.',
+        title: "Post archived",
+        description: "The post has been moved to your archive."
       });
     } catch (error) {
+      console.error("Archive failed:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to archive post.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to archive post.",
+        variant: "destructive"
       });
     }
   };
