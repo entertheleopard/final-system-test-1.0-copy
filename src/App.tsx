@@ -5,7 +5,6 @@ import { StoriesProvider, useStories } from '@/contexts/StoriesContext';
 import { Toaster } from '@/components/ui/toaster';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LadderPage from './pages/LadderPage';
 import JourneyPage from './pages/JourneyPage';
@@ -110,7 +109,6 @@ function App() {
               <Route path="/" element={<Navigate to="/ladder" replace />} />
               <Route path="/auth/signup" element={<SignupPage />} />
           <Route path="/auth/login" element={<LoginPage />} />
-          <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
           <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/ladder" element={<LadderPage />} />
           <Route path="/journey" element={<JourneyPage />} />

@@ -11,7 +11,6 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
-  verifyOtp: (email: string, token: string) => Promise<any>;
   resetPassword: (email: string) => Promise<any>;
 };
 
@@ -72,14 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const verifyOtp = async (email: string, token: string) => {
-    return supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'signup'
-    });
-  };
-
   const resetPassword = async (email: string) => {
     return supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/auth/update-password',
@@ -95,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       signup,
       logout,
-      verifyOtp,
       resetPassword
     }}>
       {children}

@@ -57,11 +57,11 @@ export default function SignupPage() {
       if (error) throw error;
       
       toast({
-        title: 'Verification email sent',
-        description: 'Please check your email for the verification link or code.',
+        title: 'Account created successfully',
+        description: 'Welcome to Invoque!',
       });
       
-      navigate('/auth/verify-email', { state: { email }, replace: true });
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err);
       toast({
