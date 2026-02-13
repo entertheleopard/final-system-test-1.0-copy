@@ -15,40 +15,7 @@ export default function SavedPostsPage() {
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  const [savedPosts, setSavedPosts] = useState<Post[]>([
-    {
-      id: 's1',
-      authorId: 'user1',
-      authorName: 'creative_artist',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'Saved inspiration',
-      mediaUrl: getRandomMockImage(7),
-      mediaType: 'image',
-      likes: 1234,
-      comments: 89,
-      reposts: 45,
-      saves: 234,
-      isLiked: false,
-      isSaved: true,
-      createdAt: new Date(),
-    },
-    {
-      id: 's2',
-      authorId: 'user2',
-      authorName: 'digital_dreams',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      content: 'Beautiful work',
-      mediaUrl: getRandomMockImage(8),
-      mediaType: 'image',
-      likes: 892,
-      comments: 56,
-      reposts: 23,
-      saves: 178,
-      isLiked: false,
-      isSaved: true,
-      createdAt: new Date(),
-    },
-  ]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
   const handleLike = (postId: string) => {
     setSavedPosts(currentPosts => currentPosts.map(post => {

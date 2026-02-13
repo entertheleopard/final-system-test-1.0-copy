@@ -29,8 +29,8 @@ export default function MessagesPage() {
     const otherId = participantIds.find(id => id !== user?.id);
     if (!otherId) return { name: 'Unknown', avatar: '', username: 'unknown' };
     
-    const found = MOCK_USERS.find(u => u.id === otherId);
-    return found || { name: 'User', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png', username: 'user' };
+    // In a real app, we would fetch the user profile here or have it included in the conversation data
+    return { name: 'User', avatar: '', username: 'user' };
   };
 
   const filteredConversations = conversations.filter(conv => {

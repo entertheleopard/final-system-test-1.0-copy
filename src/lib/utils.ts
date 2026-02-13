@@ -57,22 +57,8 @@ export function resolveMedia(post: any): { url: string; type: 'image' | 'video' 
   return null;
 }
 
-export const MOCK_IMAGES = [
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop', // Abstract 1
-  'https://images.unsplash.com/photo-1604871000636-074fa5117945?q=80&w=800&auto=format&fit=crop', // Neon
-  'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop', // Landscape
-  'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=800&auto=format&fit=crop', // Portrait
-  'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=800&auto=format&fit=crop', // Square-ish
-  'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=800&auto=format&fit=crop', // Fluid
-  'https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?q=80&w=800&auto=format&fit=crop', // Dark
-  'https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?q=80&w=800&auto=format&fit=crop', // Gradient
-  'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?q=80&w=800&auto=format&fit=crop', // Rain
-  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800&auto=format&fit=crop', // Cyberpunk
-];
+export const MOCK_IMAGES: string[] = [];
 
 export const getRandomMockImage = (index?: number) => {
-  if (typeof index === 'number') {
-    return MOCK_IMAGES[index % MOCK_IMAGES.length];
-  }
-  return MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)];
+  return "https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png";
 };

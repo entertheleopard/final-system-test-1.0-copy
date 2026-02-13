@@ -8,37 +8,7 @@ interface MusicSelectorProps {
   onClose: () => void;
 }
 
-// Mock music library (in production, this would come from a real API)
-const MOCK_TRACKS: MusicTrack[] = [
-  {
-    id: '1',
-    title: 'Summer Vibes',
-    artist: 'DJ Cool',
-    duration: 180,
-    coverUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-  },
-  {
-    id: '2',
-    title: 'Chill Beats',
-    artist: 'Lo-Fi Master',
-    duration: 210,
-    coverUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-  },
-  {
-    id: '3',
-    title: 'Upbeat Energy',
-    artist: 'Pop Star',
-    duration: 195,
-    coverUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-  },
-  {
-    id: '4',
-    title: 'Acoustic Dreams',
-    artist: 'Guitar Hero',
-    duration: 240,
-    coverUrl: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png',
-  },
-];
+const MOCK_TRACKS: MusicTrack[] = [];
 
 export default function MusicSelector({ onSelect, onClose }: MusicSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');

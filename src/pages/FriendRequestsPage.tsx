@@ -25,57 +25,8 @@ export default function FriendRequestsPage() {
     location.state?.activeTab || 'requests'
   );
 
-  // Local state for UI demonstration
-  const [requests, setRequests] = useState<FriendRequest[]>([
-    {
-      id: '1',
-      userId: 'user_1',
-      name: 'Sarah Jenkins',
-      username: 'sarah_j_art',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      mutualFriends: 12,
-      timestamp: '2h',
-    },
-    {
-      id: '2',
-      userId: 'user_2',
-      name: 'Mike Ross',
-      username: 'mike_design',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      mutualFriends: 5,
-      timestamp: '5h',
-    },
-    {
-      id: '3',
-      userId: 'user_3',
-      name: 'Jessica Chen',
-      username: 'jess_creative',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      mutualFriends: 8,
-      timestamp: '1d',
-    },
-  ]);
-
-  const [friends, setFriends] = useState<FriendRequest[]>([
-    {
-      id: '4',
-      userId: 'user_4',
-      name: 'David Kim',
-      username: 'david_k',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png',
-      mutualFriends: 24,
-      timestamp: '2d',
-    },
-    {
-      id: '5',
-      userId: 'user_5',
-      name: 'Emma Wilson',
-      username: 'emma_w',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
-      mutualFriends: 15,
-      timestamp: '3d',
-    },
-  ]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<FriendRequest[]>([]);
 
   const handleAccept = (request: FriendRequest) => {
     setRequests(requests.filter(r => r.id !== request.id));

@@ -4,8 +4,9 @@ import { useShareActions } from '@/contexts/ShareContext';
 import InstagramLayout from '@/components/InstagramLayout';
 import CommentsSheet from '@/components/CommentsSheet';
 import ShotItem from '@/components/ShotItem';
-import { getRandomMockImage } from '@/lib/utils';
 import type { Post } from '@/types/social';
+import { supabase } from '../../supabase';
+import { Loader2 } from 'lucide-react';
 
 export default function ShotsPage() {
   const { user } = useAuth();
@@ -14,68 +15,66 @@ export default function ShotsPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [activePostId, setActivePostId] = useState<string>('');
+  const [shotsData, setShotsData] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const shots: Post[] = [
-    {
-      id: 's1',
-      authorId: 'user1',
-      authorName: 'creative_artist',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'Check out this amazing creation! 🎨',
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
-      mediaType: 'image', // Using image for reliable mock rendering
-      likes: 12340,
-      comments: 456,
-      reposts: 234,
-      saves: 890,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 's2',
-      authorId: 'user2',
-      authorName: 'digital_dreams',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      content: 'Abstract vibes ✨',
-      mediaUrl: 'https://images.unsplash.com/photo-1604871000636-074fa5117945?q=80&w=800&auto=format&fit=crop',
-      mediaType: 'image',
-      likes: 8920,
-      comments: 321,
-      reposts: 156,
-      saves: 678,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-    {
-      id: 's3',
-      authorId: 'user3',
-      authorName: 'modern_creator',
-      authorAvatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      content: 'Geometric perfection 🔷',
-      mediaUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop',
-      mediaType: 'image',
-      likes: 15670,
-      comments: 567,
-      reposts: 289,
-      saves: 1234,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    },
-  ];
-
-  const [shotsData, setShotsData] = useState(shots);
-
-  // Initialize active post
   useEffect(() => {
-    if (shotsData.length > 0 && !activePostId) {
-      setActivePostId(shotsData[0].id);
-    }
-  }, [shotsData, activePostId]);
+    const fetchShots = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch posts that are videos or just random posts for discovery
+        const { data, error } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles (
+              username,
+              avatar_url
+            )
+          `)
+          .eq('archived', false)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) throw error;
+
+        if (data) {
+          const mappedPosts: Post[] = data.map((p: any) => ({
+            id: p.id,
+            authorId: p.user_id,
+            authorName: p.profiles?.username || 'Unknown',
+            authorAvatar: p.profiles?.avatar_url || '',
+            content: p.content,
+            mediaUrl: p.media_url,
+            mediaType: p.media_type || 'image',
+            likes: p.likes || 0,
+            comments: p.comments || 0,
+            reposts: p.reposts || 0,
+            saves: p.saves || 0,
+            isLiked: false,
+            isSaved: false,
+            createdAt: new Date(p.created_at),
+          }));
+          
+          // Shuffle for discovery feel
+          const shuffled = mappedPosts.sort(() => 0.5 - Math.random());
+          setShotsData(shuffled);
+          
+          if (shuffled.length > 0) {
+            setActivePostId(shuffled[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching shots:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchShots();
+  }, []);
 
   // Handle scroll snap
   useEffect(() => {
@@ -129,26 +128,37 @@ export default function ShotsPage() {
         ref={containerRef}
         className="h-[calc(100vh-4rem)] lg:h-screen w-full overflow-y-scroll snap-y snap-mandatory bg-black no-scrollbar"
       >
-        {shotsData.map((shot) => (
-          <ShotItem
-            key={shot.id}
-            shot={shot}
-            isActive={activePostId === shot.id}
-            isMuted={isMuted}
-            onMuteToggle={() => setIsMuted(!isMuted)}
-            onLike={handleLike}
-            onComment={(id) => {
-              setActivePostId(id);
-              setShowComments(true);
-            }}
-            onShare={(post) => {
-              setActivePostId(post.id);
-              openShare(post);
-            }}
-            onSave={handleSave}
-            currentUserId={user?.id}
-          />
-        ))}
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+        ) : shotsData.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-white p-8 text-center">
+            <h3 className="text-xl font-bold mb-2">No shots available</h3>
+            <p className="text-white/60">Check back later for new content.</p>
+          </div>
+        ) : (
+          shotsData.map((shot) => (
+            <ShotItem
+              key={shot.id}
+              shot={shot}
+              isActive={activePostId === shot.id}
+              isMuted={isMuted}
+              onMuteToggle={() => setIsMuted(!isMuted)}
+              onLike={handleLike}
+              onComment={(id) => {
+                setActivePostId(id);
+                setShowComments(true);
+              }}
+              onShare={(post) => {
+                setActivePostId(post.id);
+                openShare(post);
+              }}
+              onSave={handleSave}
+              currentUserId={user?.id}
+            />
+          ))
+        )}
       </div>
 
       {/* Comments Sheet */}

@@ -21,10 +21,10 @@ export default function LiveStreamViewer({ streamId, onClose }: LiveStreamViewer
 
   // Mock stream data
   const streamData = {
-    username: 'creative_artist',
-    avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-    viewers: 1234,
-    title: 'Late night creative session 🎨',
+    username: 'User',
+    avatar: '',
+    viewers: 0,
+    title: 'Live Stream',
   };
 
   // Handle heart animation

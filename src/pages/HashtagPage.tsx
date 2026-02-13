@@ -16,25 +16,7 @@ export default function HashtagPage() {
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  // Mock posts for the hashtag
-  const [hashtagPosts, setHashtagPosts] = useState<Post[]>(() => 
-    Array.from({ length: 15 }).map((_, i) => ({
-      id: `tag-${i}`,
-      authorId: `user-${i}`,
-      authorName: `creator_${i}`,
-      authorAvatar: `https://c.animaapp.com/mlix9h3omwDIgk/img/ai_${(i % 5) + 1}.png`,
-      content: `Exploring #${tag} with amazing visuals!`,
-      mediaUrl: getRandomMockImage(i + 5),
-      mediaType: 'image',
-      likes: Math.floor(Math.random() * 2000) + 100,
-      comments: Math.floor(Math.random() * 50),
-      reposts: Math.floor(Math.random() * 20),
-      saves: Math.floor(Math.random() * 100),
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    }))
-  );
+  const [hashtagPosts, setHashtagPosts] = useState<Post[]>([]);
 
   const handleLike = (postId: string) => {
     setHashtagPosts(currentPosts => currentPosts.map(post => {

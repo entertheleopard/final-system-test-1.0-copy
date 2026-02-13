@@ -26,41 +26,14 @@ export default function SearchPage() {
     }
   }, [query]);
 
-  // Mock Data
-  const mockAccounts = [
-    { id: 'user1', username: 'creative_artist', name: 'Creative Artist', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png', followers: '12.5K' },
-    { id: 'user2', username: 'digital_dreams', name: 'Digital Dreams', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png', followers: '8.2K' },
-    { id: 'user3', username: 'modern_creator', name: 'Modern Creator', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png', followers: '45.1K' },
-    { id: 'user4', username: 'visual_arts', name: 'Visual Arts', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png', followers: '3.2K' },
-    { id: 'user5', username: 'design_daily', name: 'Design Daily', avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png', followers: '98.4K' },
-  ];
-
-  const mockTags = [
-    { id: 't1', name: 'digitalart', posts: '1.2M' },
-    { id: 't2', name: 'creative', posts: '890K' },
-    { id: 't3', name: 'inspiration', posts: '5.4M' },
-    { id: 't4', name: 'design', posts: '3.1M' },
-    { id: 't5', name: 'artistsoninstagram', posts: '2.8M' },
-  ];
-
-  const [trendingPosts, setTrendingPosts] = useState<Post[]>(() => 
-    Array.from({ length: 12 }).map((_, i) => ({
-      id: `trend-${i}`,
-      authorId: `user-${i}`,
-      authorName: `creator_${i}`,
-      authorAvatar: `https://c.animaapp.com/mlix9h3omwDIgk/img/ai_${(i % 5) + 1}.png`,
-      content: 'Trending content #art #design',
-      mediaUrl: getRandomMockImage(i),
-      mediaType: 'image',
-      likes: Math.floor(Math.random() * 5000) + 500,
-      comments: Math.floor(Math.random() * 100),
-      reposts: Math.floor(Math.random() * 50),
-      saves: Math.floor(Math.random() * 200),
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(),
-    }))
-  );
+  const [trendingPosts, setTrendingPosts] = useState<Post[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  
+  // Fetch profiles for search
+  useEffect(() => {
+    // In a real app, we would fetch based on query
+    // For now, just empty or fetch some if query exists
+  }, [query]);
 
   const handleLike = (postId: string) => {
     setTrendingPosts(currentPosts => currentPosts.map(post => {
@@ -81,14 +54,8 @@ export default function SearchPage() {
     }));
   };
 
-  const filteredAccounts = mockAccounts.filter(acc => 
-    acc.username.toLowerCase().includes(query.toLowerCase()) || 
-    acc.name.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const filteredTags = mockTags.filter(tag => 
-    tag.name.toLowerCase().includes(query.replace('#', '').toLowerCase())
-  );
+  const filteredAccounts = accounts;
+  const filteredTags: any[] = [];
 
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);

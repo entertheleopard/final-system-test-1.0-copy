@@ -9,24 +9,8 @@ interface Comment {
   color?: string;
 }
 
-const MOCK_COMMENTS = [
-  { text: "This is amazing! 🔥", username: "creative_soul" },
-  { text: "Love the vibes 💜", username: "art_lover" },
-  { text: "Hello from Brazil! 🇧🇷", username: "traveler_123" },
-  { text: "Can you show the process?", username: "curious_mind" },
-  { text: "So cool!", username: "fan_01" },
-  { text: "Wow 😮", username: "visual_artist" },
-  { text: "Keep it up!", username: "supporter_x" },
-  { text: "Is this live?", username: "newbie" },
-];
-
-const AVATARS = [
-  'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-  'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-  'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-  'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png',
-  'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
-];
+const MOCK_COMMENTS: any[] = [];
+const AVATARS: string[] = [];
 
 const COLORS = [
   'text-white',

@@ -141,12 +141,11 @@ export default function MessageThreadPage() {
   const { data: profiles } = (isMockMode() ? mockProfileQuery : realProfileQuery)!;
   
   const userProfile = profiles?.[0];
-  const staticUser = MOCK_USERS.find(u => u.id === otherUserId);
   
   const participant = otherUserId ? {
-    name: userProfile?.username || staticUser?.name || 'User',
-    username: userProfile?.username || staticUser?.username || 'user',
-    profilePictureUrl: userProfile?.profilePictureUrl || staticUser?.profilePictureUrl || null,
+    name: userProfile?.username || 'User',
+    username: userProfile?.username || 'user',
+    profilePictureUrl: userProfile?.profilePictureUrl || null,
     id: otherUserId
   } : null;
 

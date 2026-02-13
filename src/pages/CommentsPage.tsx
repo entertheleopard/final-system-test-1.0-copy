@@ -4,52 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MessageSquare, Heart, Reply, MoreVertical } from 'lucide-react';
 
 export default function CommentsPage() {
-  const comments = [
-    {
-      id: 1,
-      author: 'Creative Mind',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-      content: 'This is absolutely stunning! The color palette is perfect.',
-      timestamp: '2 hours ago',
-      likes: 12,
-      replies: 3,
-      postTitle: 'Abstract Composition',
-      postImage: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_1.png',
-    },
-    {
-      id: 2,
-      author: 'Art Enthusiast',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-      content: 'Love the geometric patterns! How long did this take to create?',
-      timestamp: '5 hours ago',
-      likes: 8,
-      replies: 1,
-      postTitle: 'Geometric Harmony',
-      postImage: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-    },
-    {
-      id: 3,
-      author: 'Digital Creator',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_3.png',
-      content: 'The depth in this piece is incredible. Really inspiring work!',
-      timestamp: '1 day ago',
-      likes: 24,
-      replies: 5,
-      postTitle: 'Ethereal Dreams',
-      postImage: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_2.png',
-    },
-    {
-      id: 4,
-      author: 'Visual Artist',
-      avatar: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_4.png',
-      content: 'This speaks to me on so many levels. Beautiful composition!',
-      timestamp: '2 days ago',
-      likes: 15,
-      replies: 2,
-      postTitle: 'Modern Vision',
-      postImage: 'https://c.animaapp.com/mlix9h3omwDIgk/img/ai_5.png',
-    },
-  ];
+  const comments: any[] = [];
 
   return (
     <MainLayout>
